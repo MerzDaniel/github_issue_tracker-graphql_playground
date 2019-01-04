@@ -11,7 +11,7 @@ const githubGraphql = axios.create({
 
 const GET_ORGANIZATION = `
   {
-    repository(login: "merzdaniel") {
+    repository(owner: "merzdaniel" name: "github_issue_tracker-graphql_playground") {
       name
       url
       owner {
@@ -23,34 +23,43 @@ const GET_ORGANIZATION = `
           name
         }
       }
+      issues(first: 30) {
+        edges {
+          node {
+            number
+            title
+          }
+        }
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+      }
     }
   }
 `
 
 const Issue = issue =>
-  <div className='issue'>
-    <text>({issue.id}) {issue.name}</text>
+  <div key={issue.number} className='issue'>
+    <span>({issue.number}) {issue.title}</span>
   </div>
 
-const
-  issues =
-    [{name: 'I have nothing to do. Everything is working fine', id: 0}, {name: 'PRODUCTION DOWN HELP!', id: 1}]
-
-const Repository = repository =>
+const Repository = ({ repository }) =>
   <Fragment>
     <h3>{repository.name + `(${repository.url})`}</h3>
     <h4>Issues</h4>
-    <div className="issue_list">
-      {issues.map(i => Issue(i))}
-    </div>
+    {!repository.issues.edges.length ?
+      '<no issues>' :
+      <div className="issue_list">
+        {repository.issues.edges.map(i => Issue(i))}
+      </div>
+    }
   </Fragment>
-
 
 class App extends Component {
   state = {
     path: 'merzdaniel/github_issue_tracker-graphql_playground',
     // issues: [{data: {issues: [{name: 'issue1'}, {name: 'issue2'}] }}],
-    dataLoaded: false,
   }
   onChange = evt => {
     this.setState({path: evt.target.value})
@@ -69,7 +78,6 @@ class App extends Component {
         this.setState(() => ({
           data: result.data.data,
           errors: result.data.errors,
-          dataLoaded: true,
         }))
       })
       .catch(err => console.log(err))
@@ -95,11 +103,12 @@ class App extends Component {
             <button type="submit">Search</button>
           </form>
 
-          {!this.state.dataLoaded ?
-            'Nothing loaded yet' :
+          {
             this.state.errors ?
               'errors' :
-              <Repository repo={this.state.data.repository}/>
+            !this.state.data ?
+            'Nothing loaded yet' :
+              <Repository repository={this.state.data.repository}/>
           }
 
         </header>
