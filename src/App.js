@@ -12,6 +12,7 @@ const githubGraphql = axios.create({
 const GET_ORGANIZATION = `
   {
     repository(owner: "merzdaniel" name: "github_issue_tracker-graphql_playground") {
+      id
       name
       url
       owner {
@@ -44,7 +45,7 @@ const Issue = issue =>
     <span>({issue.number}) {issue.title}</span>
   </div>
 
-const Repository = ({ repository }) =>
+const Repository = ({repository}) =>
   <Fragment>
     <h3>{repository.name + `(${repository.url})`}</h3>
     <h4>Issues</h4>
@@ -69,6 +70,20 @@ class App extends Component {
 
     evt.preventDefault()
   }
+  createIssue = (repoId, title) => {
+    githubGraphql
+      .post('', {mutation: `{ createIssue(repositoryId: ${repoId} title: ${title}) }`})
+      .then(response => {
+        console.log(response)
+        if (response.data.errors) {
+          alert(response.data.errors[0])
+        }
+        this.fetchData()
+      })
+      .catch(err => {
+        console.log(err)
+      })
+  }
 
   fetchData = () => {
     githubGraphql
@@ -80,7 +95,13 @@ class App extends Component {
           errors: result.data.errors,
         }))
       })
-      .catch(err => console.log(err))
+      .catch(err => {
+        console.log(err)
+        this.setState(() => ({
+          data: undefined,
+          errors: [err]
+        }))
+      })
   }
 
   render() {
@@ -106,9 +127,9 @@ class App extends Component {
           {
             this.state.errors ?
               'errors' :
-            !this.state.data ?
-            'Nothing loaded yet' :
-              <Repository repository={this.state.data.repository}/>
+              !this.state.data ?
+                'Nothing loaded yet' :
+                <Repository repository={this.state.data.repository}/>
           }
 
         </header>
