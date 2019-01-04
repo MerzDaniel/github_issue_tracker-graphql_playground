@@ -30,6 +30,7 @@ const GET_DATA = (owner, repoName) => `
           node {
             number
             title
+            id
           }
         }
         pageInfo {
@@ -41,7 +42,7 @@ const GET_DATA = (owner, repoName) => `
   }
 `
 
-const Issue = issue =>
+const Issue = ({issue}) =>
   <div key={issue.number} className='issue'>
     <span>({issue.number}) {issue.title}</span>
   </div>
@@ -63,7 +64,7 @@ class Repository extends React.Component {
       {!repository.issues.edges.length ?
         '<no issues>' :
         <div className="issue_list">
-          {repository.issues.edges.map(i => Issue(i))}
+          {repository.issues.edges.map(i => <Issue key={i.node.id} issue={i.node}/>)}
         </div>
       }
       <form onSubmit={this.onSubmit}>
@@ -91,10 +92,12 @@ class App extends Component {
     githubGraphql
       .post('', {
         query: `mutation { 
-           createissue(input: {
+           createIssue(input: {
              repositoryId: "${repoId}" 
              title: "${title}"
-           }) 
+           }) {
+            issue { title }
+           }
         }`
       })
       .then(response => {
