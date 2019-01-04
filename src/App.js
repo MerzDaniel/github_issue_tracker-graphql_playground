@@ -9,9 +9,9 @@ const githubGraphql = axios.create({
   },
 })
 
-const GET_ORGANIZATION = `
+const GET_DATA = (owner, repoName) => `
   {
-    repository(owner: "merzdaniel" name: "github_issue_tracker-graphql_playground") {
+    repository(owner: "${owner}" name: "${repoName}") {
       id
       name
       url
@@ -86,8 +86,9 @@ class App extends Component {
   }
 
   fetchData = () => {
+    const [owner, repoName] = this.state.path.split('/')
     githubGraphql
-      .post('', {query: GET_ORGANIZATION})
+      .post('', {query: GET_DATA(owner, repoName)})
       .then(result => {
         console.log(result)
         this.setState(() => ({
