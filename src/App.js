@@ -45,17 +45,33 @@ const Issue = issue =>
     <span>({issue.number}) {issue.title}</span>
   </div>
 
-const Repository = ({repository}) =>
-  <Fragment>
-    <h3>{repository.name + `(${repository.url})`}</h3>
-    <h4>Issues</h4>
-    {!repository.issues.edges.length ?
-      '<no issues>' :
-      <div className="issue_list">
-        {repository.issues.edges.map(i => Issue(i))}
-      </div>
-    }
-  </Fragment>
+class Repository extends React.Component {
+  onSubmit = evt => {
+    evt.preventDefault()
+    this.props.createIssue(this.state.issueTitle)
+  }
+  onChange = evt => {
+    this.setState({issueTitle: evt.target.value})
+  }
+
+  render() {
+    const {repository} = this.props
+    return <Fragment>
+      <h3>{repository.name + `(${repository.url})`}</h3>
+      <h4>Issues</h4>
+      {!repository.issues.edges.length ?
+        '<no issues>' :
+        <div className="issue_list">
+          {repository.issues.edges.map(i => Issue(i))}
+        </div>
+      }
+      <form onSubmit={this.onSubmit}>
+        <input type="text" name="issueName" onChange={this.onChange} required/>
+        <button type={"submit"}>Create Issue</button>
+      </form>
+    </Fragment>
+  }
+}
 
 class App extends Component {
   state = {
@@ -66,13 +82,20 @@ class App extends Component {
     this.setState({path: evt.target.value})
   }
   onSubmit = evt => {
-    this.fetchData()
-
     evt.preventDefault()
+    this.fetchData()
   }
-  createIssue = (repoId, title) => {
+  createIssue = title => {
+    const repoId = this.state.data.repository.id
     githubGraphql
-      .post('', {mutation: `{ createIssue(repositoryId: ${repoId} title: ${title}) }`})
+      .post('', {
+        query: `mutation { 
+           createissue(input: {
+             repositoryId: "${repoId}" 
+             title: "${title}"
+           }) 
+        }`
+      })
       .then(response => {
         console.log(response)
         if (response.data.errors) {
@@ -130,7 +153,7 @@ class App extends Component {
               'errors' :
               !this.state.data ?
                 'Nothing loaded yet' :
-                <Repository repository={this.state.data.repository}/>
+                <Repository repository={this.state.data.repository} createIssue={this.createIssue}/>
           }
 
         </header>
