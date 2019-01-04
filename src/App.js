@@ -5,7 +5,8 @@ import axios from 'axios'
 const githubGraphql = axios.create({
   baseURL: 'https://api.github.com/graphql',
   headers: {
-    Authorization: 'bearer ' + process.env.REACT_APP_API_TOKEN
+    Authorization: 'bearer ' + process.env.REACT_APP_API_TOKEN,
+    Accept: 'application/vnd.github.starfire-preview+json',
   },
 })
 
