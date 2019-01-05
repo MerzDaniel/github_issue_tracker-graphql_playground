@@ -43,6 +43,15 @@ const GET_DATA = `
   }
 `
 
+const CREATE_ISSUE = `mutation($repoId: ID!, $title: String!) { 
+           createIssue(input: {
+             repositoryId: $repoId 
+             title: $title
+           }) {
+            issue { title }
+           }
+        }`
+
 const Issue = ({issue}) =>
   <div key={issue.number} className='issue'>
     <span>({issue.number}) {issue.title}</span>
@@ -92,14 +101,8 @@ class App extends Component {
     const repoId = this.state.data.repository.id
     githubGraphql
       .post('', {
-        query: `mutation { 
-           createIssue(input: {
-             repositoryId: "${repoId}" 
-             title: "${title}"
-           }) {
-            issue { title }
-           }
-        }`
+        query: CREATE_ISSUE,
+        variables: { repoId, title},
       })
       .then(response => {
         console.log(response)
