@@ -10,9 +10,10 @@ const githubGraphql = axios.create({
   },
 })
 
-const GET_DATA = (owner, repoName) => `
-  {
-    repository(owner: "${owner}" name: "${repoName}") {
+// Types and commas are required for query variables!
+const GET_DATA = `
+  query($owner: String!, $repoName: String!){
+    repository(owner: $owner name: $repoName) {
       id
       name
       url
@@ -115,7 +116,10 @@ class App extends Component {
   fetchData = () => {
     const [owner, repoName] = this.state.path.split('/')
     githubGraphql
-      .post('', {query: GET_DATA(owner, repoName)})
+      .post('', {
+        query: GET_DATA,
+        variables: { owner, repoName },
+      })
       .then(result => {
         console.log(result)
         this.setState(() => ({
