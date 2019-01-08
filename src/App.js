@@ -19,7 +19,7 @@ const graphqlClient = new ApolloClient({
 })
 
 // Types and commas are required for query variables!
-const GET_DATA = gql(`
+const GET_DATA = gql`
   query($owner: String!, $repoName: String!){
     repository(owner: $owner name: $repoName) {
       id
@@ -49,16 +49,16 @@ const GET_DATA = gql(`
       }
     }
   }
-`)
+`
 
-const CREATE_ISSUE = gql(`mutation($repoId: ID!, $title: String!) { 
+const CREATE_ISSUE = gql`mutation($repoId: ID!, $title: String!) { 
            createIssue(input: {
              repositoryId: $repoId 
              title: $title
            }) {
             issue { title id }
            }
-        }`)
+        }`
 
 const Issue = ({issue}) =>
   <div key={issue.number} className='issue'>
@@ -107,10 +107,15 @@ class App extends Component {
   }
   createIssue = title => {
     const repoId = this.state.data.repository.id
+    const [owner, repoName] = this.state.path.split('/')
     graphqlClient
       .mutate({
         mutation: CREATE_ISSUE,
         variables: {repoId, title},
+        awaitRefetchQueries: true,
+        refetchQueries: [
+          {query: GET_DATA, variables: {owner, repoName}}
+        ]
       })
       .then(response => {
         console.log(response)
