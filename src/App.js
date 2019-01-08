@@ -1,6 +1,22 @@
 import React, {Component, Fragment} from 'react';
 import './App.css';
 import axios from 'axios'
+import {ApolloClient} from "apollo-client";
+import {InMemoryCache} from 'apollo-cache-inmemory'
+// http link for sending graphql over http
+import {createHttpLink} from "apollo-link-http";
+// Apollo needs query to be wrapped by that
+import gql from "graphql-tag";
+
+const graphqlClient = new ApolloClient({
+  link: createHttpLink({
+    uri: 'https://api.github.com/graphql',
+    headers: {
+      Authorization: 'bearer ' + process.env.REACT_APP_API_TOKEN,
+    },
+  }),
+  cache: new InMemoryCache(),
+})
 
 const githubGraphql = axios.create({
   baseURL: 'https://api.github.com/graphql',
@@ -11,7 +27,7 @@ const githubGraphql = axios.create({
 })
 
 // Types and commas are required for query variables!
-const GET_DATA = `
+const GET_DATA = gql(`
   query($owner: String!, $repoName: String!){
     repository(owner: $owner name: $repoName) {
       id
@@ -41,7 +57,7 @@ const GET_DATA = `
       }
     }
   }
-`
+`)
 
 const CREATE_ISSUE = `mutation($repoId: ID!, $title: String!) { 
            createIssue(input: {
@@ -102,7 +118,7 @@ class App extends Component {
     githubGraphql
       .post('', {
         query: CREATE_ISSUE,
-        variables: { repoId, title},
+        variables: {repoId, title},
       })
       .then(response => {
         console.log(response)
@@ -118,23 +134,22 @@ class App extends Component {
 
   fetchData = () => {
     const [owner, repoName] = this.state.path.split('/')
-    githubGraphql
-      .post('', {
-        query: GET_DATA,
-        variables: { owner, repoName },
-      })
+    graphqlClient.query({
+      query: GET_DATA,
+      variables: { owner, repoName }
+    })
       .then(result => {
         console.log(result)
         this.setState(() => ({
-          data: result.data.data,
-          errors: result.data.errors,
+          data: result.data,
+          errors: undefined,
         }))
       })
       .catch(err => {
         console.log(err)
         this.setState(() => ({
           data: undefined,
-          errors: [err]
+          errors: [err],
         }))
       })
   }
