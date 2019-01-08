@@ -1,6 +1,5 @@
 import React, {Component, Fragment} from 'react';
 import './App.css';
-import axios from 'axios'
 import {ApolloClient} from "apollo-client";
 import {InMemoryCache} from 'apollo-cache-inmemory'
 // http link for sending graphql over http
@@ -13,17 +12,10 @@ const graphqlClient = new ApolloClient({
     uri: 'https://api.github.com/graphql',
     headers: {
       Authorization: 'bearer ' + process.env.REACT_APP_API_TOKEN,
+      Accept: 'application/vnd.github.starfire-preview+json',
     },
   }),
   cache: new InMemoryCache(),
-})
-
-const githubGraphql = axios.create({
-  baseURL: 'https://api.github.com/graphql',
-  headers: {
-    Authorization: 'bearer ' + process.env.REACT_APP_API_TOKEN,
-    Accept: 'application/vnd.github.starfire-preview+json',
-  },
 })
 
 // Types and commas are required for query variables!
@@ -59,14 +51,14 @@ const GET_DATA = gql(`
   }
 `)
 
-const CREATE_ISSUE = `mutation($repoId: ID!, $title: String!) { 
+const CREATE_ISSUE = gql(`mutation($repoId: ID!, $title: String!) { 
            createIssue(input: {
              repositoryId: $repoId 
              title: $title
            }) {
-            issue { title }
+            issue { title id }
            }
-        }`
+        }`)
 
 const Issue = ({issue}) =>
   <div key={issue.number} className='issue'>
@@ -115,16 +107,13 @@ class App extends Component {
   }
   createIssue = title => {
     const repoId = this.state.data.repository.id
-    githubGraphql
-      .post('', {
-        query: CREATE_ISSUE,
+    graphqlClient
+      .mutate({
+        mutation: CREATE_ISSUE,
         variables: {repoId, title},
       })
       .then(response => {
         console.log(response)
-        if (response.data.errors) {
-          alert(response.data.errors[0])
-        }
         this.fetchData()
       })
       .catch(err => {
