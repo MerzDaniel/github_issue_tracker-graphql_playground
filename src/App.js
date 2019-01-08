@@ -112,10 +112,16 @@ class App extends Component {
       .mutate({
         mutation: CREATE_ISSUE,
         variables: {repoId, title},
-        awaitRefetchQueries: true,
-        refetchQueries: [
-          {query: GET_DATA, variables: {owner, repoName}}
-        ]
+        update: (cacheProxy, mutationResult) => {
+          const {data: {createIssue: {issue}}} = mutationResult
+          const variables = {owner, repoName}
+          const dataUpdate = cacheProxy.readQuery({
+            query: GET_DATA, variables
+          })
+          dataUpdate.repository.issues.edges.push(issue)
+          cacheProxy.writeQuery({query: GET_DATA, variables, data: dataUpdate})
+          cacheProxy.writeData({})
+        },
       })
       .then(response => {
         console.log(response)
@@ -130,7 +136,7 @@ class App extends Component {
     const [owner, repoName] = this.state.path.split('/')
     graphqlClient.query({
       query: GET_DATA,
-      variables: { owner, repoName }
+      variables: {owner, repoName}
     })
       .then(result => {
         console.log(result)
