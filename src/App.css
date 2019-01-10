@@ -34,3 +34,17 @@
 .issue {
   /*justify-content: flex-start;*/
 }
+
+#input-path {
+  width: 20rem;
+}
+
+#repository {
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#issues {
+  width: fit-content;
+}

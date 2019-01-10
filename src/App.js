@@ -84,9 +84,14 @@ class Repository extends React.Component {
       cacheProxy.writeData({})
     }
 
-    return <Fragment>
-      <h3>{repository.name + `(${repository.url})`}</h3>
-      <h4>Issues</h4>
+    return <div id="repository">
+      <h4>
+        {repository.name}
+        <div><em>{`(${repository.url})`}</em></div>
+        </h4>
+
+      <div id="issues">
+      <strong>Issues</strong>
       {!repository.issues.edges.length ?
         '<no issues>' :
         <div className="issue_list">
@@ -104,7 +109,8 @@ class Repository extends React.Component {
           </form>
         }
       </Mutation>
-    </Fragment>
+      </div>
+    </div>
   }
 }
 
@@ -130,15 +136,15 @@ class App extends Component {
             <label htmlFor="url">
               Show open issues for github {'<user>/<repoName>'}
             </label>
-            <input
-              id="url"
+            <input id="input-path"
               type="text"
               value={path}
               onChange={this.onChange}
             />
 
             {/*ErrorPolicy is needed because of a react-apollo bug which does not update the children correctly*/}
-            <Query query={GET_DATA} variables={{owner, repoName}} errorPolicy="ignore" onCompleted={(data) => {
+            <Query query={GET_DATA} variables={{owner, repoName}} errorPolicy="all" onCompleted={(data) => {
+              if (!data.repository) return;
               const realPath = `${data.repository.owner.login}/${data.repository.name}`
               if (this.state.path !== realPath)
                 this.setState({path: realPath})
