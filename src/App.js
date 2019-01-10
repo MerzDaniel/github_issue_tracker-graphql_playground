@@ -6,7 +6,7 @@ import {InMemoryCache} from 'apollo-cache-inmemory'
 import {createHttpLink} from "apollo-link-http";
 // Apollo needs query to be wrapped by that
 import gql from "graphql-tag";
-import {Query} from 'react-apollo'
+import {Query, ApolloProvider} from 'react-apollo'
 
 const graphqlClient = new ApolloClient({
   link: createHttpLink({
@@ -138,33 +138,35 @@ class App extends Component {
     const {path} = this.state
     const [owner, repoName] = path.split('/')
     return (
-      <div className="App">
-        <header className="App-header">
-          <h2>IssueTracker</h2>
+      <ApolloProvider client={graphqlClient}>
+        <div className="App">
+          <header className="App-header">
+            <h2>IssueTracker</h2>
 
-          <label htmlFor="url">
-            Show open issues for github {'<user>/<repoName>'}
-          </label>
-          <input
-            id="url"
-            type="text"
-            value={path}
-            onChange={this.onChange}
-          />
+            <label htmlFor="url">
+              Show open issues for github {'<user>/<repoName>'}
+            </label>
+            <input
+              id="url"
+              type="text"
+              value={path}
+              onChange={this.onChange}
+            />
 
-          {/*ErrorPolicy is needed because of a react-apollo bug which does not update the children correctly*/}
-          <Query query={GET_DATA} client={graphqlClient} variables={{owner, repoName}} errorPolicy="ignore">
-            {({data, loading, error}) =>
-              loading ? 'Loading....' :
-                // error ? 'Repository could not be found' :
-                error && error.type === 'NOT_FOUND' ? 'Repository could not be found.' :
-                  error ? console.log(error) || console.log('#### data: ') || console.log(data) || 'Error occured: ' + error :
-                  !data.repository ? 'Repo was found but no data was returned...' :
-                    <Repository repository={data.repository} createIssue={this.createIssue}/>
-            }
-          </Query>
-        </header>
-      </div>
+            {/*ErrorPolicy is needed because of a react-apollo bug which does not update the children correctly*/}
+            <Query query={GET_DATA} variables={{owner, repoName}} errorPolicy="ignore">
+              {({data, loading, error}) =>
+                loading ? 'Loading....' :
+                  // error ? 'Repository could not be found' :
+                  error && error.type === 'NOT_FOUND' ? 'Repository could not be found.' :
+                    error ? console.log(error) || console.log('#### data: ') || console.log(data) || 'Error occured: ' + error :
+                      !data.repository ? 'Repo was found but no data was returned...' :
+                        <Repository repository={data.repository} createIssue={this.createIssue}/>
+              }
+            </Query>
+          </header>
+        </div>
+      </ApolloProvider>
     )
       ;
   }
