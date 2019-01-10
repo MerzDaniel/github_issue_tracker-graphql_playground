@@ -6,7 +6,7 @@ import {InMemoryCache} from 'apollo-cache-inmemory'
 import {createHttpLink} from "apollo-link-http";
 // Apollo needs query to be wrapped by that
 import gql from "graphql-tag";
-import {Query, ApolloProvider} from 'react-apollo'
+import {Query, ApolloProvider, Mutation} from 'react-apollo'
 
 const graphqlClient = new ApolloClient({
   link: createHttpLink({
@@ -67,16 +67,23 @@ const Issue = ({issue}) =>
   </div>
 
 class Repository extends React.Component {
-  onSubmit = evt => {
-    evt.preventDefault()
-    this.props.createIssue(this.state.issueTitle)
-  }
   onChange = evt => {
     this.setState({issueTitle: evt.target.value})
   }
 
   render() {
     const {repository} = this.props
+    const updateCache = (cacheProxy, mutationResult) => {
+      const {data: {createIssue: {issue}}} = mutationResult
+      const variables = {owner: repository.owner.login, repoName: repository.name}
+      const dataUpdate = cacheProxy.readQuery({
+        query: GET_DATA, variables
+      })
+      dataUpdate.repository.issues.edges.push(issue)
+      cacheProxy.writeQuery({query: GET_DATA, variables, data: dataUpdate})
+      cacheProxy.writeData({})
+    }
+
     return <Fragment>
       <h3>{repository.name + `(${repository.url})`}</h3>
       <h4>Issues</h4>
@@ -86,10 +93,17 @@ class Repository extends React.Component {
           {repository.issues.edges.map(i => <Issue key={i.node.id} issue={i.node}/>)}
         </div>
       }
-      <form onSubmit={this.onSubmit}>
-        <input type="text" name="issueName" onChange={this.onChange} required/>
-        <button type={"submit"}>Create Issue</button>
-      </form>
+      <Mutation mutation={CREATE_ISSUE} update={updateCache}>
+        {(mutate) =>
+          <form onSubmit={(evt) => {
+            evt.preventDefault();
+            mutate({variables: {repoId: repository.id, title: this.state.issueTitle}});
+          }}>
+            <input type="text" name="issueName" onChange={this.onChange} required/>
+            <button type={"submit"}>Create Issue</button>
+          </form>
+        }
+      </Mutation>
     </Fragment>
   }
 }
@@ -99,39 +113,9 @@ class App extends Component {
     path: 'merzdaniel/github_issue_tracker-graphql_playground',
     // issues: [{data: {issues: [{name: 'issue1'}, {name: 'issue2'}] }}],
   }
+
   onChange = evt => {
     this.setState({path: evt.target.value})
-  }
-  onSubmit = evt => {
-    evt.preventDefault()
-    this.fetchData()
-  }
-  createIssue = title => {
-    const [owner, repoName] = this.state.path.split('/')
-    const variables = {owner, repoName}
-    graphqlClient.query({query: GET_DATA, variables}).then(data => {
-      const repoId = data.repository.id
-      graphqlClient
-        .mutate({
-          mutation: CREATE_ISSUE,
-          variables: {repoId, title},
-          update: (cacheProxy, mutationResult) => {
-            const {data: {createIssue: {issue}}} = mutationResult
-            const dataUpdate = cacheProxy.readQuery({
-              query: GET_DATA, variables
-            })
-            dataUpdate.repository.issues.edges.push(issue)
-            cacheProxy.writeQuery({query: GET_DATA, variables, data: dataUpdate})
-            cacheProxy.writeData({})
-          },
-        })
-        .then(response => {
-          console.log(response)
-        })
-        .catch(err => {
-          console.log(err)
-        })
-    })
   }
 
   render() {
@@ -154,15 +138,21 @@ class App extends Component {
             />
 
             {/*ErrorPolicy is needed because of a react-apollo bug which does not update the children correctly*/}
-            <Query query={GET_DATA} variables={{owner, repoName}} errorPolicy="ignore">
-              {({data, loading, error}) =>
-                loading ? 'Loading....' :
-                  // error ? 'Repository could not be found' :
-                  error && error.type === 'NOT_FOUND' ? 'Repository could not be found.' :
-                    error ? console.log(error) || console.log('#### data: ') || console.log(data) || 'Error occured: ' + error :
-                      !data.repository ? 'Repo was found but no data was returned...' :
-                        <Repository repository={data.repository} createIssue={this.createIssue}/>
-              }
+            <Query query={GET_DATA} variables={{owner, repoName}} errorPolicy="ignore" onCompleted={(data) => {
+              const realPath = `${data.repository.owner.login}/${data.repository.name}`
+              if (this.state.path !== realPath)
+                this.setState({path: realPath})
+            }}>
+              {({data, loading, error}) => {
+                if (loading || error || !data.repository)
+                  return loading ? 'Loading....' :
+                    // error ? 'Repository could not be found' :
+                    error && error.type === 'NOT_FOUND' ? 'Repository could not be found.' :
+                      error ? console.log(error) || console.log('#### data: ') || console.log(data) || 'Error occured: ' + error :
+                        'Repo was found but no data was returned...'
+
+                return <Repository repository={data.repository}/>
+              }}
             </Query>
           </header>
         </div>
