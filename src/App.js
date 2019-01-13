@@ -22,6 +22,10 @@ const graphqlClient = new ApolloClient({
 // Types and commas are required for query variables!
 const GET_DATA = gql`
   query($owner: String!, $repoName: String!){
+    viewer {
+      id
+      login
+    }
     repository(owner: $owner name: $repoName) {
       id
       name
@@ -60,6 +64,15 @@ const CREATE_ISSUE = gql`mutation($repoId: ID!, $title: String!) {
             issue { title id }
            }
         }`
+
+const closeIssue = gql`mutation($userId: String!, $issueId: ID!) {
+      closeIssue(input: {
+          clientMutationId: $userId 
+          issueId: $issueId
+      }) {
+        clientMutationId
+      }
+   }`
 
 const Issue = ({issue}) =>
   <div key={issue.number} className='issue'>
@@ -157,7 +170,24 @@ class App extends Component {
                       error ? console.log(error) || console.log('#### data: ') || console.log(data) || 'Error occured: ' + error :
                         'Repo was found but no data was returned...'
 
-                return <Repository repository={data.repository}/>
+                const closeAllIssues = (mutate) => () => {
+                  data.repository.issues.edges.forEach(edge => {
+                    mutate({variables: {issueId: edge.node.id, userId: data.viewer.login}})
+                  })
+                }
+
+                return <React.Fragment>
+                  <Repository repository={data.repository}/>
+
+                  <Mutation mutation={closeIssue} update={() => {
+                  }}>
+                    {mutate => {
+                      return <button onClick={closeAllIssues(mutate)}>
+                        Close all issues
+                      </button>
+                    }}
+                  </Mutation>
+                </React.Fragment>
               }}
             </Query>
           </header>
